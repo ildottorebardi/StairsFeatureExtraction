@@ -1,0 +1,736 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>FeatureExtractionWIPCompare</title><meta name="generator" content="MATLAB 8.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2015-04-26"><meta name="DC.source" content="FeatureExtractionWIPCompare.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#3">LowPass Filter</a></li><li><a href="#4">FastFourier Transform</a></li><li><a href="#5">Peak Finder</a></li><li><a href="#7">Generating Test Data</a></li><li><a href="#8">LowPass Filter</a></li><li><a href="#9">FastFourier Transform</a></li><li><a href="#10">Peak Finder</a></li><li><a href="#11">Error Calculations</a></li><li><a href="#12">Data Classification</a></li></ul></div><pre class="codeinput">clear <span class="string">all</span>;
+
+<span class="comment">% Specifying the directory of known datafiles</span>
+directory = <span class="string">'Raw Data/Android Data/Walking/'</span>;
+<span class="comment">% Specifying the three classes</span>
+classes = {<span class="string">'Up'</span>,<span class="string">'Down'</span>,<span class="string">'Flat'</span>};
+
+<span class="comment">% Set the number of peaks wishing to be counted</span>
+peakCount = 10;
+NormalisedCalc = <span class="string">'Yes'</span>;
+
+<span class="keyword">for</span> classNum = 1:3
+    specDir = strcat(directory,char(classes(classNum)));
+
+    <span class="comment">% Set an empty array for ammassing peak data</span>
+    peakValues = [];
+
+    <span class="comment">% Defining the accepted file type for reading</span>
+    dataFiles = dir(fullfile(specDir,<span class="string">'*.csv'</span>));
+    <span class="comment">% Counting how many files of the type .csv are within the folder</span>
+    fileCount = length(dataFiles);
+    <span class="comment">% Obtaining the filenames</span>
+    filenames = cell(fileCount,1);
+
+    <span class="keyword">for</span> i = 1:fileCount
+        filenames(i) = {dataFiles(i).name};
+    <span class="keyword">end</span>
+
+    <span class="comment">% Setting the filename</span>
+    <span class="keyword">for</span> j = 1:fileCount
+</pre><pre class="codeinput">        filename = char(filenames(j));
+        file=filename(1:end-4);
+
+        <span class="comment">% Opening the CSV file</span>
+        dataArray = csvread(strcat(specDir,<span class="string">'/'</span>,filename));
+
+        <span class="comment">% Finding a value for initial time based on the phone's internal clock</span>
+        format <span class="string">long</span> <span class="string">g</span>;
+        initialValue = dataArray(1,4);
+
+        <span class="comment">% Reading the 4th (time) column within the CSV file</span>
+        rows = size(dataArray,1);
+        timeColumn = dataArray(:,[4]);
+        sensorTimeColumn = dataArray(:,[5]);
+
+        <span class="comment">% Creating a new column for adjusted time</span>
+        adjustedColumn = timeColumn - initialValue;
+        tauColumn = sensorTimeColumn - timeColumn;
+
+        <span class="comment">% Writing the new adjusted time column to the RHS of the original CSV file if there are only 5 existing columns within the file</span>
+        <span class="comment">% Would prefer to use csvwrite for consistency but function can only write to 5 degrees of accuracy</span>
+        columns = size(dataArray, 2);
+        <span class="keyword">if</span> columns == 6
+            dlmwrite(strcat(specDir,<span class="string">'/'</span>,filename),[dataArray,adjustedColumn,tauColumn], <span class="string">'precision'</span>,12);
+            dataArray = [dataArray,adjustedColumn,tauColumn];
+        <span class="keyword">else</span>
+        <span class="keyword">end</span>
+
+
+        <span class="comment">% Parsing through the CSV file and creating individual matrices for accelerometer, magnetometer and gyroscope data</span>
+        accelValues = [];
+        magValues = [];
+        gyroValues = [];
+        <span class="keyword">for</span> i = 1:rows
+                rowParse = dataArray(i,:);
+                <span class="keyword">if</span> rowParse(6) == 777777;
+                    accelValues = [accelValues; rowParse];
+                <span class="keyword">elseif</span> rowParse(6) == 888888;
+                    magValues = [magValues; rowParse];
+                <span class="keyword">elseif</span> rowParse(6) == 999999;
+                    gyroValues = [gyroValues; rowParse];
+                <span class="keyword">else</span>
+                <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="comment">% Creating individual columns of the time constants tau for each sensor</span>
+        accelSensorTime = accelValues(:,[8]);
+
+        <span class="comment">% Applying a filter to prevent anomolies corrupting the calculated tau</span>
+        correctedAccelSensorTime = accelSensorTime(accelSensorTime &lt; 30);
+
+        <span class="comment">% Finding the mean value of Tau for each sensor</span>
+        tauAccel = mean(correctedAccelSensorTime);
+
+        <span class="comment">% Creating new matrices of individual columns for X, Y and Z vertices and time, from the acceleration matrix</span>
+        accelX = accelValues(:,[1]);
+        accelY = accelValues(:,[2]);
+        accelZ = accelValues(:,[3]);
+        accelTime = abs(accelValues(:,[7]));
+        accMag = ((accelX.^2) + (accelY.^2) + (accelZ.^2)).^0.5;
+        accMagOriginal = accMag;
+</pre><h2>LowPass Filter<a name="3"></a></h2><pre class="codeinput">        initialAcc = accMag(1);
+        accRows = size(accMag, 1);
+        T = 50; <span class="comment">% Rate at which data is collected, 1/f, where f = 20Hz</span>
+        <span class="comment">% Calculating alpha, for Android...1-standard value</span>
+        a = tauAccel/(tauAccel + T);
+
+        <span class="keyword">for</span> i = 1:accRows;
+            <span class="keyword">if</span> i == 1;
+                accMag(i) = accMag(i);
+            <span class="keyword">elseif</span> 2 &lt;= i &lt;= accRows;
+                accMag(i) = a*accMag(i) + (1 - a)*accMag(i - 1);
+            <span class="keyword">else</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+</pre><h2>FastFourier Transform<a name="4"></a></h2><p>Fast Fourier transofmr on original accelerometer data</p><pre class="codeinput">        fastFourier = fft(accMagOriginal);
+        <span class="comment">% Fast Fourier transform on Low-Pass Filter data</span>
+        fastFourierLP = fft(accMag);
+        <span class="comment">% Defining the length of the FFT</span>
+        ffLength = length(fastFourier);
+        <span class="comment">% Defining the sampling frequency</span>
+        samplingF = 20;
+        <span class="comment">% Defining the y-axis</span>
+        fAxis = [0:ffLength-1] * samplingF/ffLength;
+
+        <span class="comment">% Halving the data range as only first half of frequencies can be used</span>
+        fftManip = [fAxis.',abs(fastFourier)];
+        halfLength = round(length(fftManip)/2);
+        fftManip = fftManip([2:halfLength],:);
+        <span class="comment">% Creating two new arrays to be plotted when using the findpeaks function</span>
+        peaksfAxis = fftManip(:,1);
+        peaksFastFourier = fftManip(:,2);
+</pre><h2>Peak Finder<a name="5"></a></h2><p>Plot the two new axis created     fftGraph = figure;     findpeaks(peaksFastFourier,peaksfAxis)     title('Frequency vs. Normalised Acceleration Data After An Applied FFT');     xlabel('Frequency (Hz)');     ylabel('f(acceleration)');     print(fftGraph, '-depsc',[strcat(specDir,'/findPeaks'),char(file)]); Find the locations of the peaks</p><pre class="codeinput">        [pks,locs] = findpeaks(peaksFastFourier,peaksfAxis);
+        peaksMat = [pks,locs];
+        <span class="comment">% Rank the peaks in descending order of magnitude</span>
+        [~,rank] = sort(peaksMat(:,1),<span class="string">'descend'</span>);
+        magMat = peaksMat(rank,:);
+        <span class="comment">% Choose the top n number of peaks</span>
+        topN = magMat(1:peakCount,:);
+        <span class="comment">% Rank these n peaks by their frequency in ascending order</span>
+        [~,rank2] = sort(topN(:,2));
+        <span class="comment">% Present the top n peaks</span>
+        arrangedN = topN(rank2,:);
+    <span class="comment">%     peakValues = [peakValues,arrangedN]; % Peaks in order of frequency</span>
+        peakValues = [peakValues,topN]; <span class="comment">% Peaks in order of magnitude</span>
+</pre><pre class="codeinput">    <span class="keyword">end</span>
+
+    magAdd = [];
+    aveMag = [];
+    freqAdd = [];
+    aveFreq = [];
+    <span class="keyword">for</span> k = 1:fileCount
+        magAdd = [magAdd,peakValues(:,2*k-1)];
+    <span class="keyword">end</span>
+    <span class="keyword">for</span> l = 1:peakCount
+        avg = sum(magAdd(l,:))/fileCount;
+        aveMag = [aveMag;avg];
+    <span class="keyword">end</span>
+    <span class="keyword">for</span> m = 1:fileCount
+        freqAdd = [freqAdd,peakValues(:,2*m)];
+    <span class="keyword">end</span>
+    <span class="keyword">for</span> n = 1:peakCount
+            avg = sum(freqAdd(n,:))/fileCount;
+            aveFreq = [aveFreq;avg];
+    <span class="keyword">end</span>
+
+<span class="comment">% Create three arrays of "optimal" values for the largest n peaks on the FFT diagrams for the corresponding three classes</span>
+    <span class="keyword">if</span> classNum == 1
+        optimalUp = [aveMag,aveFreq];
+    <span class="keyword">elseif</span> classNum == 2
+        optimalDown = [aveMag,aveFreq];
+    <span class="keyword">elseif</span> classNum == 3
+        optimalFlat = [aveMag,aveFreq];
+    <span class="keyword">else</span>
+    <span class="keyword">end</span>
+
+<span class="keyword">end</span>
+
+clearvars <span class="string">-except</span> <span class="string">optimalUp</span> <span class="string">optimalDown</span> <span class="string">optimalFlat</span> <span class="string">peakCount</span> <span class="string">NormalisedCalc</span>
+
+testFile = <span class="string">'testData1.csv'</span>;
+</pre><h2>Generating Test Data<a name="7"></a></h2><p>Set an empty array for ammassing test data</p><pre class="codeinput">peakValues = [];
+
+<span class="comment">% for testFile = 1</span>
+file=testFile(1:end-4);
+
+<span class="comment">% Opening the CSV file</span>
+dataArray = csvread(testFile);
+
+<span class="comment">% Finding a value for initial time based on the phone's internal clock</span>
+format <span class="string">long</span> <span class="string">g</span>;
+initialValue = dataArray(1,4);
+
+<span class="comment">% Reading the 4th (time) column within the CSV file</span>
+rows = size(dataArray,1);
+timeColumn = dataArray(:,[4]);
+sensorTimeColumn = dataArray(:,[5]);
+
+<span class="comment">% Creating a new column for adjusted time</span>
+adjustedColumn = timeColumn - initialValue;
+tauColumn = sensorTimeColumn - timeColumn;
+
+<span class="comment">% Writing the new adjusted time column to the RHS of the original CSV file if there are only 5 existing columns within the file</span>
+<span class="comment">% Would prefer to use csvwrite for consistency but function can only write to 5 degrees of accuracy</span>
+columns = size(dataArray, 2);
+<span class="keyword">if</span> columns == 6
+    dlmwrite(testFile,[dataArray,adjustedColumn,tauColumn], <span class="string">'precision'</span>,12);
+    dataArray = [dataArray,adjustedColumn,tauColumn];
+<span class="keyword">else</span>
+<span class="keyword">end</span>
+
+<span class="comment">% Parsing through the CSV file and creating individual matrices for accelerometer, magnetometer and gyroscope data</span>
+accelValues = [];
+magValues = [];
+gyroValues = [];
+<span class="keyword">for</span> i = 1:rows
+        rowParse = dataArray(i,:);
+        <span class="keyword">if</span> rowParse(6) == 777777;
+            accelValues = [accelValues; rowParse];
+        <span class="keyword">elseif</span> rowParse(6) == 888888;
+            magValues = [magValues; rowParse];
+        <span class="keyword">elseif</span> rowParse(6) == 999999;
+            gyroValues = [gyroValues; rowParse];
+        <span class="keyword">else</span>
+        <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">% Creating individual columns of the time constants tau for each sensor</span>
+accelSensorTime = accelValues(:,[8]);
+
+<span class="comment">% Applying a filter to prevent anomolies corrupting the calculated tau</span>
+correctedAccelSensorTime = accelSensorTime(accelSensorTime &lt; 30);
+
+<span class="comment">% Finding the mean value of Tau for each sensor</span>
+tauAccel = mean(correctedAccelSensorTime);
+
+<span class="comment">% Creating new matrices of individual columns for X, Y and Z vertices and time, from the acceleration matrix</span>
+accelX = accelValues(:,[1]);
+accelY = accelValues(:,[2]);
+accelZ = accelValues(:,[3]);
+accelTime = abs(accelValues(:,[7]));
+accMag = ((accelX.^2) + (accelY.^2) + (accelZ.^2)).^0.5;
+accMagOriginal = accMag;
+</pre><h2>LowPass Filter<a name="8"></a></h2><pre class="codeinput">initialAcc = accMag(1);
+accRows = size(accMag, 1);
+T = 50; <span class="comment">% Rate at which data is collected, 1/f, where f = 20Hz</span>
+<span class="comment">% Calculating alpha, for Android...1-standard value</span>
+a = tauAccel/(tauAccel + T);
+
+<span class="keyword">for</span> i = 1:accRows;
+    <span class="keyword">if</span> i == 1;
+        accMag(i) = accMag(i);
+    <span class="keyword">elseif</span> 2 &lt;= i &lt;= accRows;
+        accMag(i) = a*accMag(i) + (1 - a)*accMag(i - 1);
+    <span class="keyword">else</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><h2>FastFourier Transform<a name="9"></a></h2><p>Fast Fourier transofmr on original accelerometer data</p><pre class="codeinput">fastFourier = fft(accMagOriginal);
+<span class="comment">% Fast Fourier transform on Low-Pass Filter data</span>
+fastFourierLP = fft(accMag);
+<span class="comment">% Defining the length of the FFT</span>
+ffLength = length(fastFourier);
+<span class="comment">% Defining the sampling frequency</span>
+samplingF = 20;
+<span class="comment">% Defining the y-axis</span>
+fAxis = [0:ffLength-1] * samplingF/ffLength;
+
+<span class="comment">% Halving the data range as only first half of frequencies can be used</span>
+fftManip = [fAxis.',abs(fastFourier)];
+halfLength = round(length(fftManip)/2);
+fftManip = fftManip([2:halfLength],:);
+<span class="comment">% Creating two new arrays to be plotted when using the findpeaks function</span>
+peaksfAxis = fftManip(:,1);
+peaksFastFourier = fftManip(:,2);
+</pre><h2>Peak Finder<a name="10"></a></h2><p>Plot the two new axis created     fftGraph = figure;     findpeaks(peaksFastFourier,peaksfAxis)     title('Frequency vs. Normalised Acceleration Data After An Applied FFT');     xlabel('Frequency (Hz)');     ylabel('f(acceleration)');     print(fftGraph, '-depsc',[strcat(specDir,'/findPeaks'),char(file)]); Find the locations of the peaks</p><pre class="codeinput">[pks,locs] = findpeaks(peaksFastFourier,peaksfAxis);
+peaksMat = [pks,locs];
+<span class="comment">% Rank the peaks in descending order of magnitude</span>
+[~,rank] = sort(peaksMat(:,1),<span class="string">'descend'</span>);
+magMat = peaksMat(rank,:);
+<span class="comment">% Choose the top n number of peaks</span>
+topN = magMat(1:peakCount,:);
+<span class="comment">% Rank these n peaks by their frequency in ascending order</span>
+[~,rank2] = sort(topN(:,2));
+<span class="comment">% Present the top n peaks</span>
+arrangedN = topN(rank2,:);
+<span class="comment">%     peakValues = [peakValues,arrangedN]; % Peaks in order of frequency</span>
+peakValues = [peakValues,topN];
+</pre><h2>Error Calculations<a name="11"></a></h2><pre class="codeinput"><span class="keyword">if</span> strcmp(<span class="string">'No'</span>,NormalisedCalc) == 1
+    <span class="comment">% Standard Error Calculation</span>
+    deltaUp = abs(optimalUp - peakValues);
+    deltaDown = abs(optimalDown - peakValues);
+    deltaFlat = abs(optimalFlat - peakValues);
+
+    errorUp = sum(deltaUp(:))/(peakCount*2);
+    errorDown = sum(deltaDown(:))/(peakCount*2);
+    errorFlat = sum(deltaFlat(:))/(peakCount*2);
+<span class="keyword">elseif</span> strcmp(<span class="string">'Yes'</span>,NormalisedCalc) == 1
+    <span class="comment">% Normalised Error Calculation</span>
+    <span class="comment">% Normalising the test data values</span>
+    normPeakValues = [peakValues(:,1)/max(peakValues(:,1)),peakValues(:,2)/max(peakValues(:,2))];
+    <span class="comment">% Normalising the "optimal" data values</span>
+    normDeltaUp = [optimalUp(:,1)/max(optimalUp(:,1)),optimalUp(:,2)/max(optimalUp(:,2))];
+    normDeltaDown = [optimalDown(:,1)/max(optimalDown(:,1)),optimalDown(:,2)/max(optimalDown(:,2))];
+    normDeltaFlat = [optimalFlat(:,1)/max(optimalFlat(:,1)),optimalFlat(:,2)/max(optimalFlat(:,2))];
+    <span class="comment">% Creating arrays of 2n values of data for the absolute difference between test and true data</span>
+    deltaUp = abs(normDeltaUp - normPeakValues);
+    deltaDown = abs(normDeltaDown - normPeakValues);
+    deltaFlat = abs(normDeltaFlat - normPeakValues);
+    <span class="comment">% Calculating the total error by summing up all error values and /2n</span>
+    errorUp = sum(deltaUp(:))/(peakCount*2);
+    errorDown = sum(deltaDown(:))/(peakCount*2);
+    errorFlat = sum(deltaFlat(:))/(peakCount*2);
+<span class="keyword">else</span>
+<span class="keyword">end</span>
+</pre><h2>Data Classification<a name="12"></a></h2><pre class="codeinput"><span class="keyword">if</span> errorUp &lt; errorDown &amp;&amp; errorUp &lt; errorFlat
+    disp(<span class="string">'The data is of the Up Class'</span>)
+<span class="keyword">elseif</span> errorDown &lt; errorUp &amp;&amp; errorDown &lt; errorFlat
+    disp(<span class="string">'The data is of the Down Class'</span>)
+<span class="keyword">elseif</span> errorFlat &lt; errorUp &amp;&amp; errorFlat &lt; errorDown
+    disp(<span class="string">'The data is of the Flat Class'</span>)
+<span class="keyword">else</span>
+<span class="keyword">end</span>
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+clear all;
+
+% Specifying the directory of known datafiles
+directory = 'Raw Data/Android Data/Walking/';
+% Specifying the three classes
+classes = {'Up','Down','Flat'};
+
+% Set the number of peaks wishing to be counted
+peakCount = 10;
+NormalisedCalc = 'Yes';
+
+for classNum = 1:3
+    specDir = strcat(directory,char(classes(classNum)));
+
+    % Set an empty array for ammassing peak data
+    peakValues = [];
+
+    % Defining the accepted file type for reading
+    dataFiles = dir(fullfile(specDir,'*.csv'));
+    % Counting how many files of the type .csv are within the folder
+    fileCount = length(dataFiles);
+    % Obtaining the filenames
+    filenames = cell(fileCount,1);
+
+    for i = 1:fileCount
+        filenames(i) = {dataFiles(i).name};
+    end
+
+    % Setting the filename
+    for j = 1:fileCount
+
+        filename = char(filenames(j));
+        file=filename(1:end-4);
+
+        % Opening the CSV file
+        dataArray = csvread(strcat(specDir,'/',filename));
+
+        % Finding a value for initial time based on the phone's internal clock
+        format long g;
+        initialValue = dataArray(1,4);
+
+        % Reading the 4th (time) column within the CSV file
+        rows = size(dataArray,1);
+        timeColumn = dataArray(:,[4]);
+        sensorTimeColumn = dataArray(:,[5]);
+
+        % Creating a new column for adjusted time
+        adjustedColumn = timeColumn - initialValue;
+        tauColumn = sensorTimeColumn - timeColumn;
+
+        % Writing the new adjusted time column to the RHS of the original CSV file if there are only 5 existing columns within the file
+        % Would prefer to use csvwrite for consistency but function can only write to 5 degrees of accuracy
+        columns = size(dataArray, 2);
+        if columns == 6
+            dlmwrite(strcat(specDir,'/',filename),[dataArray,adjustedColumn,tauColumn], 'precision',12);
+            dataArray = [dataArray,adjustedColumn,tauColumn];
+        else
+        end
+
+
+        % Parsing through the CSV file and creating individual matrices for accelerometer, magnetometer and gyroscope data
+        accelValues = [];
+        magValues = [];
+        gyroValues = [];
+        for i = 1:rows
+                rowParse = dataArray(i,:);
+                if rowParse(6) == 777777;
+                    accelValues = [accelValues; rowParse];
+                elseif rowParse(6) == 888888;
+                    magValues = [magValues; rowParse];
+                elseif rowParse(6) == 999999;
+                    gyroValues = [gyroValues; rowParse];
+                else
+                end
+        end
+
+        % Creating individual columns of the time constants tau for each sensor
+        accelSensorTime = accelValues(:,[8]);
+
+        % Applying a filter to prevent anomolies corrupting the calculated tau
+        correctedAccelSensorTime = accelSensorTime(accelSensorTime < 30);
+
+        % Finding the mean value of Tau for each sensor
+        tauAccel = mean(correctedAccelSensorTime);
+
+        % Creating new matrices of individual columns for X, Y and Z vertices and time, from the acceleration matrix
+        accelX = accelValues(:,[1]);
+        accelY = accelValues(:,[2]);
+        accelZ = accelValues(:,[3]);
+        accelTime = abs(accelValues(:,[7]));
+        accMag = ((accelX.^2) + (accelY.^2) + (accelZ.^2)).^0.5;
+        accMagOriginal = accMag;
+
+        %% LowPass Filter
+        initialAcc = accMag(1);
+        accRows = size(accMag, 1);
+        T = 50; % Rate at which data is collected, 1/f, where f = 20Hz
+        % Calculating alpha, for Android...1-standard value
+        a = tauAccel/(tauAccel + T);
+
+        for i = 1:accRows;
+            if i == 1;
+                accMag(i) = accMag(i);
+            elseif 2 <= i <= accRows;
+                accMag(i) = a*accMag(i) + (1 - a)*accMag(i - 1);
+            else
+            end
+        end
+
+        %% FastFourier Transform
+        % Fast Fourier transofmr on original accelerometer data
+        fastFourier = fft(accMagOriginal);
+        % Fast Fourier transform on Low-Pass Filter data
+        fastFourierLP = fft(accMag);
+        % Defining the length of the FFT
+        ffLength = length(fastFourier);
+        % Defining the sampling frequency
+        samplingF = 20;
+        % Defining the y-axis
+        fAxis = [0:ffLength-1] * samplingF/ffLength;
+
+        % Halving the data range as only first half of frequencies can be used
+        fftManip = [fAxis.',abs(fastFourier)];
+        halfLength = round(length(fftManip)/2);
+        fftManip = fftManip([2:halfLength],:);
+        % Creating two new arrays to be plotted when using the findpeaks function
+        peaksfAxis = fftManip(:,1);
+        peaksFastFourier = fftManip(:,2);
+
+        %% Peak Finder
+        % Plot the two new axis created
+    %     fftGraph = figure;
+    %     findpeaks(peaksFastFourier,peaksfAxis)
+    %     title('Frequency vs. Normalised Acceleration Data After An Applied FFT');
+    %     xlabel('Frequency (Hz)');
+    %     ylabel('f(acceleration)');
+    %     print(fftGraph, '-depsc',[strcat(specDir,'/findPeaks'),char(file)]);
+        % Find the locations of the peaks
+        [pks,locs] = findpeaks(peaksFastFourier,peaksfAxis);
+        peaksMat = [pks,locs];
+        % Rank the peaks in descending order of magnitude
+        [~,rank] = sort(peaksMat(:,1),'descend');
+        magMat = peaksMat(rank,:);
+        % Choose the top n number of peaks
+        topN = magMat(1:peakCount,:);
+        % Rank these n peaks by their frequency in ascending order
+        [~,rank2] = sort(topN(:,2));
+        % Present the top n peaks
+        arrangedN = topN(rank2,:);
+    %     peakValues = [peakValues,arrangedN]; % Peaks in order of frequency
+        peakValues = [peakValues,topN]; % Peaks in order of magnitude
+
+    end
+
+    magAdd = [];
+    aveMag = [];
+    freqAdd = [];
+    aveFreq = [];
+    for k = 1:fileCount
+        magAdd = [magAdd,peakValues(:,2*k-1)];
+    end
+    for l = 1:peakCount
+        avg = sum(magAdd(l,:))/fileCount;
+        aveMag = [aveMag;avg];
+    end
+    for m = 1:fileCount
+        freqAdd = [freqAdd,peakValues(:,2*m)];
+    end
+    for n = 1:peakCount
+            avg = sum(freqAdd(n,:))/fileCount;
+            aveFreq = [aveFreq;avg];
+    end
+    
+% Create three arrays of "optimal" values for the largest n peaks on the FFT diagrams for the corresponding three classes
+    if classNum == 1
+        optimalUp = [aveMag,aveFreq];
+    elseif classNum == 2
+        optimalDown = [aveMag,aveFreq];
+    elseif classNum == 3
+        optimalFlat = [aveMag,aveFreq];
+    else
+    end
+    
+end
+
+clearvars -except optimalUp optimalDown optimalFlat peakCount NormalisedCalc
+
+testFile = 'testData1.csv';
+
+%% Generating Test Data
+% Set an empty array for ammassing test data
+peakValues = [];
+
+% for testFile = 1
+file=testFile(1:end-4);
+
+% Opening the CSV file
+dataArray = csvread(testFile);
+
+% Finding a value for initial time based on the phone's internal clock
+format long g;
+initialValue = dataArray(1,4);
+
+% Reading the 4th (time) column within the CSV file
+rows = size(dataArray,1);
+timeColumn = dataArray(:,[4]);
+sensorTimeColumn = dataArray(:,[5]);
+
+% Creating a new column for adjusted time
+adjustedColumn = timeColumn - initialValue;
+tauColumn = sensorTimeColumn - timeColumn;
+
+% Writing the new adjusted time column to the RHS of the original CSV file if there are only 5 existing columns within the file
+% Would prefer to use csvwrite for consistency but function can only write to 5 degrees of accuracy
+columns = size(dataArray, 2);
+if columns == 6
+    dlmwrite(testFile,[dataArray,adjustedColumn,tauColumn], 'precision',12);
+    dataArray = [dataArray,adjustedColumn,tauColumn];
+else
+end
+
+% Parsing through the CSV file and creating individual matrices for accelerometer, magnetometer and gyroscope data
+accelValues = [];
+magValues = [];
+gyroValues = [];
+for i = 1:rows
+        rowParse = dataArray(i,:);
+        if rowParse(6) == 777777;
+            accelValues = [accelValues; rowParse];
+        elseif rowParse(6) == 888888;
+            magValues = [magValues; rowParse];
+        elseif rowParse(6) == 999999;
+            gyroValues = [gyroValues; rowParse];
+        else
+        end
+end
+
+% Creating individual columns of the time constants tau for each sensor
+accelSensorTime = accelValues(:,[8]);
+
+% Applying a filter to prevent anomolies corrupting the calculated tau
+correctedAccelSensorTime = accelSensorTime(accelSensorTime < 30);
+
+% Finding the mean value of Tau for each sensor
+tauAccel = mean(correctedAccelSensorTime);
+
+% Creating new matrices of individual columns for X, Y and Z vertices and time, from the acceleration matrix
+accelX = accelValues(:,[1]);
+accelY = accelValues(:,[2]);
+accelZ = accelValues(:,[3]);
+accelTime = abs(accelValues(:,[7]));
+accMag = ((accelX.^2) + (accelY.^2) + (accelZ.^2)).^0.5;
+accMagOriginal = accMag;
+
+%% LowPass Filter
+initialAcc = accMag(1);
+accRows = size(accMag, 1);
+T = 50; % Rate at which data is collected, 1/f, where f = 20Hz
+% Calculating alpha, for Android...1-standard value
+a = tauAccel/(tauAccel + T);
+
+for i = 1:accRows;
+    if i == 1;
+        accMag(i) = accMag(i);
+    elseif 2 <= i <= accRows;
+        accMag(i) = a*accMag(i) + (1 - a)*accMag(i - 1);
+    else
+    end
+end
+
+%% FastFourier Transform
+% Fast Fourier transofmr on original accelerometer data
+fastFourier = fft(accMagOriginal);
+% Fast Fourier transform on Low-Pass Filter data
+fastFourierLP = fft(accMag);
+% Defining the length of the FFT
+ffLength = length(fastFourier);
+% Defining the sampling frequency
+samplingF = 20;
+% Defining the y-axis
+fAxis = [0:ffLength-1] * samplingF/ffLength;
+
+% Halving the data range as only first half of frequencies can be used
+fftManip = [fAxis.',abs(fastFourier)];
+halfLength = round(length(fftManip)/2);
+fftManip = fftManip([2:halfLength],:);
+% Creating two new arrays to be plotted when using the findpeaks function
+peaksfAxis = fftManip(:,1);
+peaksFastFourier = fftManip(:,2);
+
+%% Peak Finder
+% Plot the two new axis created
+%     fftGraph = figure;
+%     findpeaks(peaksFastFourier,peaksfAxis)
+%     title('Frequency vs. Normalised Acceleration Data After An Applied FFT');
+%     xlabel('Frequency (Hz)');
+%     ylabel('f(acceleration)');
+%     print(fftGraph, '-depsc',[strcat(specDir,'/findPeaks'),char(file)]);
+% Find the locations of the peaks
+[pks,locs] = findpeaks(peaksFastFourier,peaksfAxis);
+peaksMat = [pks,locs];
+% Rank the peaks in descending order of magnitude
+[~,rank] = sort(peaksMat(:,1),'descend');
+magMat = peaksMat(rank,:);
+% Choose the top n number of peaks
+topN = magMat(1:peakCount,:);
+% Rank these n peaks by their frequency in ascending order
+[~,rank2] = sort(topN(:,2));
+% Present the top n peaks
+arrangedN = topN(rank2,:);
+%     peakValues = [peakValues,arrangedN]; % Peaks in order of frequency
+peakValues = [peakValues,topN];
+
+%% Error Calculations
+if strcmp('No',NormalisedCalc) == 1
+    % Standard Error Calculation
+    deltaUp = abs(optimalUp - peakValues);
+    deltaDown = abs(optimalDown - peakValues);
+    deltaFlat = abs(optimalFlat - peakValues);
+    
+    errorUp = sum(deltaUp(:))/(peakCount*2);
+    errorDown = sum(deltaDown(:))/(peakCount*2);
+    errorFlat = sum(deltaFlat(:))/(peakCount*2);
+elseif strcmp('Yes',NormalisedCalc) == 1
+    % Normalised Error Calculation
+    % Normalising the test data values
+    normPeakValues = [peakValues(:,1)/max(peakValues(:,1)),peakValues(:,2)/max(peakValues(:,2))];
+    % Normalising the "optimal" data values
+    normDeltaUp = [optimalUp(:,1)/max(optimalUp(:,1)),optimalUp(:,2)/max(optimalUp(:,2))];
+    normDeltaDown = [optimalDown(:,1)/max(optimalDown(:,1)),optimalDown(:,2)/max(optimalDown(:,2))];
+    normDeltaFlat = [optimalFlat(:,1)/max(optimalFlat(:,1)),optimalFlat(:,2)/max(optimalFlat(:,2))];
+    % Creating arrays of 2n values of data for the absolute difference between test and true data
+    deltaUp = abs(normDeltaUp - normPeakValues);
+    deltaDown = abs(normDeltaDown - normPeakValues);
+    deltaFlat = abs(normDeltaFlat - normPeakValues);
+    % Calculating the total error by summing up all error values and /2n
+    errorUp = sum(deltaUp(:))/(peakCount*2);
+    errorDown = sum(deltaDown(:))/(peakCount*2);
+    errorFlat = sum(deltaFlat(:))/(peakCount*2);
+else
+end
+
+%% Data Classification
+if errorUp < errorDown && errorUp < errorFlat
+    disp('The data is of the Up Class')
+elseif errorDown < errorUp && errorDown < errorFlat
+    disp('The data is of the Down Class')
+elseif errorFlat < errorUp && errorFlat < errorDown
+    disp('The data is of the Flat Class')
+else
+end
+
+##### SOURCE END #####
+--></body></html>
